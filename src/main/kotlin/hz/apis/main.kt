@@ -12,7 +12,6 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import java.util.*
 
 val mapper = jacksonObjectMapper()
-val mapMapper = mapper.readerForMapOf(Map::class.java)
 
 fun main() {
     val props = Properties().apply {

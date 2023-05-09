@@ -11,8 +11,10 @@ CREATE OR REPLACE MAPPING desserts(
 
 CREATE OR REPLACE MAPPING orders(
     __key int,
-    dessert_id int,
-    recommendations json
+    dessertId int,
+    itemCount int,
+    dessertName varchar,
+    dessertCategory varchar
 ) TYPE IMAP OPTIONS (
     'keyFormat' = 'int',
     'valueFormat' = 'json-flat'

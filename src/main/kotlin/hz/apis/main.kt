@@ -18,6 +18,8 @@ fun main() {
         setProperty("bootstrap.servers", "localhost:9092")
         setProperty("key.deserializer", LongDeserializer::class.java.canonicalName)
         setProperty("value.deserializer", StringDeserializer::class.java.canonicalName)
+        setProperty("group.id","dessert-order")
+        setProperty("auto.offset.reset", "earliest")
     }
     val pipeline = Pipeline.create()
     pipeline.readFrom(KafkaSources.kafka<Long, String>(props, "orders"))
@@ -51,7 +53,7 @@ fun getEnrichedOrder(event: Map.Entry<Long, String>, dessertJson: HazelcastJsonV
     val dessert = mapper.readValue<Dessert>(dessertJson.toString())
     val enrichedOrder = EnrichedOrder(
         dessertId = order.dessertId,
-        count = order.count,
+        itemCount = order.itemCount,
         dessertName = dessert.name,
         dessertCategory = dessert.category,
     )

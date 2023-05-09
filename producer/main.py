@@ -18,6 +18,7 @@ def main():
     client = hazelcast.HazelcastClient()
     m = client.get_map("desserts").blocking()
     dessert_count = m.size()
+    client.shutdown()
     if dessert_count == 0:
         raise Exception("There are no desserts!")
     producer = KafkaProducer(
@@ -28,12 +29,11 @@ def main():
     for i in range(10000):
         value = json.dumps({
             "dessertId": random.randint(0, dessert_count - 1),
-            "count": random.randint(1, 6),
+            "itemCount": random.randint(1, 6),
         })
         producer.send(topic, value=value, key=key + i)
         time.sleep(1)
     producer.close(timeout=10)
-    client.shutdown()
 
 if __name__ == "__main__":
     main()

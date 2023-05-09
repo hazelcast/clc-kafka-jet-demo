@@ -25,12 +25,13 @@ def main():
         value_serializer=str.encode,
     )
     key = int(time.time() * 10)
-    for i in range(10, 20):
+    for i in range(10000):
         value = json.dumps({
             "dessertId": random.randint(0, dessert_count - 1),
             "count": random.randint(1, 6),
         })
         producer.send(topic, value=value, key=key + i)
+        time.sleep(1)
     producer.close(timeout=10)
     client.shutdown()
 

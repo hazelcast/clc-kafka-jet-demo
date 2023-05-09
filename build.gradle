@@ -11,9 +11,10 @@ repositories {
 }
 
 dependencies {
-    testImplementation 'org.jetbrains.kotlin:kotlin-test'
     compileOnly 'com.hazelcast:hazelcast:5.3.0-BETA-2'
     compileOnly 'com.hazelcast.jet:hazelcast-jet-kafka:5.3.0-BETA-2'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
 }
 
 test {

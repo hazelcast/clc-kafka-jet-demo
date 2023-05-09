@@ -51,7 +51,7 @@ fun getEnrichedOrder(event: Map.Entry<Long, String>, dessertJson: HazelcastJsonV
     val order = mapper.readValue<Order>(event.value)
     val dessert = mapper.readValue<Dessert>(dessertJson.toString())
     val enrichedOrder = EnrichedOrder(
-        dessertID = order.dessertId,
+        dessertId = order.dessertId,
         count = order.count,
         dessertName = dessert.name,
         dessertCategory = dessert.category,

@@ -27,11 +27,11 @@ fun main() {
         .setName("read order from Kafka topic and enrich it using a map")
         .mapUsingIMap("desserts",
             // lookup value
-            { event ->
-                getDessertID(event.value) },
+            { order ->
+                getDessertID(order.value) },
             // map and return new value
-            { event, dessertJson: HazelcastJsonValue ->
-                getEnrichedOrder(event, dessertJson) }
+            { order, dessertJson: HazelcastJsonValue ->
+                getEnrichedOrder(order, dessertJson) }
         )
         .setName("save enriched order to map")
         .writeTo(Sinks.map(
@@ -48,8 +48,8 @@ fun main() {
 fun getDessertID(orderVal: String) =
     mapper.readValue<Order>(orderVal).dessertId
 
-fun getEnrichedOrder(event: Map.Entry<Long, String>, dessertJson: HazelcastJsonValue): Pair<Long, HazelcastJsonValue> {
-    val order = mapper.readValue<Order>(event.value)
+fun getEnrichedOrder(orderVal: Map.Entry<Long, String>, dessertJson: HazelcastJsonValue): Pair<Long, HazelcastJsonValue> {
+    val order = mapper.readValue<Order>(orderVal.value)
     val dessert = mapper.readValue<Dessert>(dessertJson.toString())
     val enrichedOrder = EnrichedOrder(
         dessertId = order.dessertId,
@@ -58,5 +58,5 @@ fun getEnrichedOrder(event: Map.Entry<Long, String>, dessertJson: HazelcastJsonV
         dessertCategory = dessert.category,
     )
     val value = mapper.writeValueAsString(enrichedOrder)
-    return event.key to HazelcastJsonValue(value)
+    return orderVal.key to HazelcastJsonValue(value)
 }

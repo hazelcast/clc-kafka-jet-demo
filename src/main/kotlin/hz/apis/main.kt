@@ -1,49 +1,61 @@
 package hz.apis
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.hazelcast.core.Hazelcast
 import com.hazelcast.core.HazelcastJsonValue
-import com.hazelcast.jet.json.JsonUtil
 import com.hazelcast.jet.kafka.KafkaSources
 import com.hazelcast.jet.pipeline.Pipeline
-import com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService
 import com.hazelcast.jet.pipeline.Sinks
-import com.hazelcast.sql.SqlService
+import org.apache.kafka.common.serialization.LongDeserializer
 import org.apache.kafka.common.serialization.StringDeserializer
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 import java.util.*
 
+val mapper = jacksonObjectMapper()
+val mapMapper = mapper.readerForMapOf(Map::class.java)
 
 fun main() {
     val props = Properties().apply {
         setProperty("bootstrap.servers", "localhost:9092")
-        setProperty("key.deserializer", StringDeserializer::class.java.canonicalName)
+        setProperty("key.deserializer", LongDeserializer::class.java.canonicalName)
         setProperty("value.deserializer", StringDeserializer::class.java.canonicalName)
     }
     val pipeline = Pipeline.create()
-    pipeline.readFrom(KafkaSources.kafka<String, String>(props, "orders"))
+    pipeline.readFrom(KafkaSources.kafka<Long, String>(props, "orders"))
         .withoutTimestamps()
-        .setName("copy from Kafka orders to Map orders")
+        .setName("read order from Kafka topic and enrich it using a map")
         .mapUsingIMap("desserts",
-            { event -> getDessertID(event.value) },
+            // lookup value
+            { event ->
+                getDessertID(event.value) },
+            // map and return new value
             { event, dessertJson: HazelcastJsonValue ->
-                val order = JsonUtil.mapFrom(event.value.toString())!!
-                val dessert = JsonUtil.mapFrom(dessertJson.toString())!!
-                val enrichedOrder = order.toMutableMap().apply {
-                    putAll(dessert)
-                }
-                val value = JsonUtil.hazelcastJsonValue(JsonUtil.toJson(enrichedOrder))
-                event.key to value
-            }
+                getEnrichedOrder(event, dessertJson) }
         )
-         .writeTo(Sinks.map(
+        .setName("save enriched order to map")
+        .writeTo(Sinks.map(
              "orders",
+            // map key
              { it.first },
+            // map value
              { it.second },
          ))
     val hz = Hazelcast.bootstrappedInstance()
     hz.jet.newJob(pipeline)
 }
 
-fun getDessertID(orderVal: String): Int =
-    JsonUtil.mapFrom(orderVal)?.get("dessert_id")?.toString()?.toInt() ?: 0
+fun getDessertID(orderVal: String) =
+    mapper.readValue<Order>(orderVal).dessertId
+
+fun getEnrichedOrder(event: Map.Entry<Long, String>, dessertJson: HazelcastJsonValue): Pair<Long, HazelcastJsonValue> {
+    val order = mapper.readValue<Order>(event.value)
+    val dessert = mapper.readValue<Dessert>(dessertJson.toString())
+    val enrichedOrder = EnrichedOrder(
+        dessertID = order.dessertId,
+        count = order.count,
+        dessertName = dessert.name,
+        dessertCategory = dessert.category,
+    )
+    val value = mapper.writeValueAsString(enrichedOrder)
+    return event.key to HazelcastJsonValue(value)
+}
